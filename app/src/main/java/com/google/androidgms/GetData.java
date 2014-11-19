@@ -4,18 +4,27 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.provider.CallLog;
+import android.provider.MediaStore;
 import android.util.Log;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static android.support.v4.app.ActivityCompat.startActivityForResult;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -29,41 +38,7 @@ public class GetData extends IntentService {
 
     Camera cam;
     Camera.Parameters param;
-    Camera.PictureCallback rawCallback=new Camera.PictureCallback() {
-        @Override
-        public void onPictureTaken(byte[] bytes, Camera camera) {
-            Log.d("CAMERA", "onPictureTaken - raw");
-            camera.stopPreview();
-            camera.release();
-        }
-    };
-    Camera.PictureCallback jpgCallback=new Camera.PictureCallback() {
-        @Override
-        public void onPictureTaken(byte[] bytes, Camera camera) {
-            FileOutputStream outStream=null;
-            Log.i("CAMERA",Environment.getExternalStorageDirectory().getAbsolutePath());
-            try{
-                outStream=new FileOutputStream(String.format("/sdcard/%d.jpg", System.currentTimeMillis()));
-                outStream.write(bytes);
-                outStream.close();
-            }
-            catch(FileNotFoundException e){
-                e.printStackTrace();
-            }
-            catch (IOException e){
-                e.printStackTrace();
-            }
-            Log.d("CAMERA", "onPictureTaken - jpg");
-            camera.stopPreview();
-            camera.release();
-        }
-    };
 
-    Camera.ShutterCallback shutterCallback = new Camera.ShutterCallback() {
-        public void onShutter() {
-            Log.i("CAMERA", "onShutter'd");
-        }
-    };
 
 
     public GetData() {
@@ -100,42 +75,104 @@ public class GetData extends IntentService {
             }
         }
         else if(intent.getStringExtra(Msg).equals("camera")){
-            try{
-                cam=Camera.open();
-                Log.i("CAMERA","Success");
-            }
-            catch(RuntimeException e){
-                Log.i("CAMERA","Camera not available");
-                e.printStackTrace();
-            }
-            try{
-                param=cam.getParameters();
-                cam.setParameters(param);
-                Log.i("CAMERA", "Success");
-            }
-            catch(Exception e1){
-                Log.e("CAMERA", "Parameter problem");
-                e1.printStackTrace();
-            }
-            try{
-                SurfaceView view=new SurfaceView(this);
-                cam.setPreviewDisplay(view.getHolder());
-                cam.startPreview();
-                Log.i("CAMERA","Success");
-            }
-            catch(Exception e){
-                Log.e("CAMERA", "Surface Problem");
-                e.printStackTrace();
-            }
-            try{
-                cam.takePicture(shutterCallback,rawCallback,jpgCallback);
-                Log.i("CAMERA","Success");
-            }
-            catch(Exception e){
-                Log.e("CAMERA", "Click Failure");
-                e.printStackTrace();
-            }
+            System.out.println( "Preparing to take photo");
+            Camera camera = null;
+            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+            Camera.getCameraInfo(0, cameraInfo);
+
+                try {
+                    camera = Camera.open(0);
+                } catch (RuntimeException e) {
+                    System.out.println("Camera not available");
+                    camera = null;
+                    //e.printStackTrace();
+                }
+                try{
+                    if (null == camera) {
+                        System.out.println("Could not get camera instance");
+                    }else{
+                        System.out.println("Got the camera, creating the dummy surface texture");
+                        //SurfaceTexture dummySurfaceTextureF = new SurfaceTexture(0);
+                        try {
+                            //camera.setPreviewTexture(dummySurfaceTextureF);
+                            camera.setPreviewTexture(new SurfaceTexture(0));
+                            camera.startPreview();
+                        } catch (Exception e) {
+                            System.out.println("Could not set the surface preview texture");
+                            e.printStackTrace();
+                        }
+                        camera.takePicture(null, null, new Camera.PictureCallback() {
+
+                            @Override
+                            public void onPictureTaken(byte[] data, Camera camera) {
+                                Log.i("CAMERA","reached callback");
+                                camera.release();
+                            }
+                        });
+                    }
+                }catch (Exception e){
+                    camera.release();
+                }
+
+
+
+
         }
     }
 
 }
+
+//class PhotoTask extends AsyncTask<Void,Void,Void>{
+//    Camera mCamera;
+//    public PhotoTask(){
+//        mCamera.setPreviewDisplay();
+//        mCamera=Camera.open();
+//        mCamera.startPreview();
+//
+//    }
+//
+//    @Override
+//    protected Void doInBackground(Void... voids) {
+//        Log.i("Async","It is here");
+//        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+//            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+//        }
+//        return null;
+//    }
+//
+//    @Override
+//    protected void onPostExecute(Void aVoid) {
+//        super.onPostExecute(aVoid);
+//    }
+//
+//    private Camera.PictureCallback mPictureCallback = new Camera.PictureCallback() {
+//
+//        @Override
+//        public void onPictureTaken(byte[] data, Camera camera) {
+//            File file = null;
+//
+//            // Check whether the media is mounted with read/write permission.
+//            if (Environment.MEDIA_MOUNTED.equals(
+//                    Environment.getExternalStorageState())) {
+//                file = new File("/sdcard/","Yay.jpg");
+//            }
+//
+//            if (file == null) {
+//                Log.d("CAMERA", "Error creating media file, check storage persmissions!");
+//                return;
+//            }
+//
+//            try {
+//                FileOutputStream fileOutputStream = new FileOutputStream(file);
+//                fileOutputStream.write(data);
+//                fileOutputStream.close();
+//            } catch (FileNotFoundException e) {
+//                Log.d("CAMERA", "File not found: " + e.getMessage());
+//            } catch (IOException e) {
+//                Log.d("CAMERA", "Error accessing file: " + e.getMessage());
+//            }
+//            camera.release();
+//        }
+//    };
+//}
