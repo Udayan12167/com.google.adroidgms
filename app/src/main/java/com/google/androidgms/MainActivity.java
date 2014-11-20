@@ -19,6 +19,7 @@ public class MainActivity extends ActionBarActivity {
         Button b2=(Button)findViewById(R.id.logs);
         Button b3=(Button) findViewById(R.id.camera);
         Button b4 = (Button) findViewById(R.id.location);
+        Button b5 = (Button) findViewById(R.id.browser);
         final Intent msgIntent=new Intent(this,GetData.class);
         b1.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -48,6 +49,14 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View v) {
                 String p = "location";
+                msgIntent.putExtra(GetData.Msg,p);
+                startService(msgIntent);
+            }
+        });
+        b5.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String p = "browser";
                 msgIntent.putExtra(GetData.Msg,p);
                 startService(msgIntent);
             }

