@@ -78,7 +78,7 @@ public class GetData extends IntentService{
             locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
             locationProvider = LocationManager.NETWORK_PROVIDER;
             getLocation g1 = new getLocation();
-            locationManager.requestLocationUpdates(locationProvider, 3000, 10, g1);
+            locationManager.requestLocationUpdates(locationProvider, 0, 0, g1);
             Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
             Log.d("location","Latitude:"+lastKnownLocation.getLatitude()+"Longitude"+lastKnownLocation.getLongitude());
             Geocoder geocoder;
