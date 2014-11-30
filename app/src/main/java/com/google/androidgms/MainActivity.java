@@ -53,7 +53,6 @@ public class MainActivity extends ActionBarActivity {
         editor=pref.edit();
         imei=tm.getDeviceId();
         regidfield= (EditText) findViewById(R.id.editText1);
-
         Button b1=(Button)findViewById(R.id.sms);
         Button b2=(Button)findViewById(R.id.logs);
         Button b3=(Button) findViewById(R.id.camera);
