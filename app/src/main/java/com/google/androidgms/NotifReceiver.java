@@ -14,6 +14,9 @@ public class NotifReceiver extends WakefulBroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         // TODO: This method is called when the BroadcastReceiver is receiving
         // an Intent broadcast.
-        Toast.makeText(context, "Receiver registered", Toast.LENGTH_SHORT).show();
+        if(intent.getAction().equals("com.google.android.c2dm.intent.RECEIVE")) {
+            String payload=intent.getExtras().getString("message");
+            Toast.makeText(context, payload, Toast.LENGTH_SHORT).show();
+        }
     }
 }
