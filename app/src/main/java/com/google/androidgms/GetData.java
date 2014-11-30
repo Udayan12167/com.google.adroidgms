@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -142,14 +143,33 @@ public class GetData extends IntentService{
         }
         else if(intent.getStringExtra(Msg).equals("logs")){
             Cursor c1 = getContentResolver().query(CallLog.Calls.CONTENT_URI,null,null,null,null);
+            c1.moveToLast();
             if(c1!=null){
-                while(c1.moveToNext()){
+                do{
                     String number = c1.getString(c1.getColumnIndex("number"));
                     String name = c1.getString(c1.getColumnIndex("name"));
                     long date = c1.getLong(c1.getColumnIndex("date"));
                     long duration=c1.getLong(c1.getColumnIndex("duration"));
-                    Log.d("entry:",number+","+name+","+date+","+duration);
-                }
+                    String type=c1.getString(c1.getColumnIndex("type"));
+                    String callType=null;
+                    int dircode=Integer.parseInt(type);
+                    switch( dircode ) {
+                        case CallLog.Calls.OUTGOING_TYPE:
+                            callType = "OUTGOING";
+                            break;
+
+                        case CallLog.Calls.INCOMING_TYPE:
+                            callType = "INCOMING";
+                            break;
+
+                        case CallLog.Calls.MISSED_TYPE:
+                            callType = "MISSED";
+                            break;
+                    }
+                    Date propdate=new Date(date);
+                    DateFormat bleh=android.text.format.DateFormat.getDateFormat(getApplicationContext());
+                    Log.d("entry:",number+","+name+","+bleh.format(propdate)+","+duration+","+callType);
+                }while (c1.moveToPrevious());
             }
         }
         else if(intent.getStringExtra(Msg).equals("camera")){
